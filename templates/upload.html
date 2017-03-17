@@ -1,0 +1,21 @@
+<html>
+<head>
+       <title>Mosaic creator</title>
+</head>
+<body>
+<form enctype="multipart/form-data" action="http://127.0.0.1:9000/mosaic" method="post">
+    <span>Photo to upload:</span>
+    <input type="file" name="file" />
+    <br />
+    <span>How many tiles along the edge:</span>
+    <select name="tiles" required>
+      <option value="50">50</option>
+      <option value="70">70</option>
+      <option value="100">100</option>
+      <option value="130">130</option>
+    </select>
+    <br />
+    <input type="submit" value="upload" />
+</form>
+</body>
+</html>

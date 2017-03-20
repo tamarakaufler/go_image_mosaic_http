@@ -66,7 +66,14 @@ func showMosaic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// create the mosaic
-	mosaicEnc := CreateMosaic(tilesDir, origImage, tilesCount)
+	mosaicEnc, err := CreateMosaic(tilesDir, origImage, tilesCount)
+	if err != nil {
+		fmt.Printf("Cannot show the mosaic page: %v", err)
+
+		t, _ := template.ParseFiles(tmplDir + "upload.html")
+		t.Execute(w, &MosaicData{Error: err})
+		return
+	}
 
 	// prepare and process the template
 	t, err := template.ParseFiles(tmplDir + "mosaic.html")

@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"github.com/nfnt/resize"
 	"image"
 	"image/draw"
 	"image/jpeg"
 	"io/ioutil"
-	"log"
 	"math"
 	"os"
 	"regexp"
@@ -130,12 +130,13 @@ func (tile TileGeometry) drawMosaicTile(tiles map[string]*TileImage, origImage i
 
 }
 
-func CreateMosaic(tilesDir string, origImage image.Image, tilesCount int) string {
+func CreateMosaic(tilesDir string, origImage image.Image, tilesCount int) (string, error) {
 
 	// prepare the tiles
 	tileFiles, err := ioutil.ReadDir(tilesDir)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("%s\n", err)
+		return "", err
 	}
 
 	var wg sync.WaitGroup
@@ -152,7 +153,9 @@ func CreateMosaic(tilesDir string, origImage image.Image, tilesCount int) string
 	yDelta := int((yMax - yMin) / tilesCount)
 
 	if xDelta <= 0 || yDelta <= 0 {
-		log.Fatalf("\nERROR: xDelta=%d, yDelta=%d\n\tmust be > 0\n\n", xDelta, yDelta)
+		errorMessage := fmt.Sprintf("ERROR: xDelta=%d, yDelta=%d, must be > 0\n\n", xDelta, yDelta)
+		err := errors.New(errorMessage)
+		return "", err
 	}
 
 	fmt.Printf("--> xMin=%v, xMax=%v, xDelta=%v\n\n", xMin, xMax, xDelta)
@@ -234,12 +237,12 @@ func CreateMosaic(tilesDir string, origImage image.Image, tilesCount int) string
 	wg.Wait()
 
 	tEnd = time.Now()
-	fmt.Printf("\t==> Mosaic processing took %v to run.\n", tEnd.Sub(tStart))
+	fmt.Printf("\t==> Mosaic processing took %v to create.\n", tEnd.Sub(tStart))
 
 	// save the new finished image
 	mosaicFile, err := os.Create("mosaic.jpg")
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 	defer mosaicFile.Close()
 
@@ -254,5 +257,5 @@ func CreateMosaic(tilesDir string, origImage image.Image, tilesCount int) string
 
 	fmt.Println("END ...")
 
-	return mosaicEnc
+	return mosaicEnc, nil
 }

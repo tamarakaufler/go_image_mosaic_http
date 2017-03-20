@@ -229,8 +229,10 @@ func CreateMosaic(tilesDir string, origImage image.Image, tilesCount int) (strin
 
 			wg.Add(1)
 
-			newTile := &TileGeometry{x, y, xMin, yMin, &wg, &mutex}
-			newTile.drawMosaicTile(tiles, origImage, xDelta, yDelta, newImage)
+			go func(xMin, yMin, x, y int) {
+				newTile := &TileGeometry{x, y, xMin, yMin, &wg, &mutex}
+				newTile.drawMosaicTile(tiles, origImage, xDelta, yDelta, newImage)
+			}(xMin, yMin, x, y)
 		}
 	}
 

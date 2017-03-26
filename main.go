@@ -1,12 +1,8 @@
 package main
 
 import (
-	"bytes"
-	"encoding/base64"
 	"fmt"
 	"html/template"
-	"image"
-	"image/jpeg"
 	"net/http"
 	"strconv"
 )
@@ -41,84 +37,65 @@ func showUploadPage(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, &MosaicData{ImageEnc: "", MosaicEnc: ""})
 }
 
+func processError(w http.ResponseWriter, err error, message, page string) {
+	fmt.Printf(message, "%v", err)
+
+	t, _ := template.ParseFiles(tmplDir + page)
+	t.Execute(w, &MosaicData{Error: err})
+}
+
+func processForm(w http.ResponseWriter, r *http.Request) (int, error) {
+	if err := r.ParseMultipartForm(sizeLimit); nil != err {
+		return 0, err
+	}
+
+	// number of tiles along the edge
+	tilesCount, err := strconv.Atoi(r.FormValue("tiles"))
+	if err != nil {
+		return 0, err
+	}
+
+	fmt.Printf("tilesCount: %v=d", tilesCount)
+
+	return tilesCount, nil
+}
+
 // handler to process uploaded file to create a mosaic
 // and show bothe the original and the mosaic
 func showMosaic(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf(">>> in showMosaic\n")
 
-	if err := r.ParseMultipartForm(sizeLimit); nil != err {
-		fmt.Printf("Cannot show the mosaic page: %v", err)
-
-		t, _ := template.ParseFiles(tmplDir + "upload.html")
-		t.Execute(w, &MosaicData{Error: err})
+	tilesCount, err := processForm(w, r)
+	if err != nil {
+		processError(w, err, "Cannot show the mosaic page:", "upload.html")
 		return
 	}
 
-	// number of tiles along the edge
-	tilesCount, _ := strconv.Atoi(r.FormValue("tiles"))
-	fmt.Printf("tilesCount: %v=d", tilesCount)
-
-	origImage, origImageEnc, err := encodeOrigImage(r)
+	origImage, origImageEnc, err := EncodeOrigImage(r)
 	if err != nil {
-		t, _ := template.ParseFiles(tmplDir + "upload.html")
-		t.Execute(w, &MosaicData{Error: err})
+		processError(w, err, "Cannot encode uploaded image:", "upload.html")
 		return
 	}
 
 	// create the mosaic
 	mosaicEnc, err := CreateMosaic(tilesDir, origImage, tilesCount)
 	if err != nil {
-		fmt.Printf("Cannot show the mosaic page: %v", err)
-
-		t, _ := template.ParseFiles(tmplDir + "upload.html")
-		t.Execute(w, &MosaicData{Error: err})
+		processError(w, err, "Cannot show the mosaic page:", "upload.html")
 		return
 	}
 
 	// prepare and process the template
 	t, err := template.ParseFiles(tmplDir + "mosaic.html")
 	if err != nil {
-		fmt.Printf("Cannot show the mosaic page: %v", err)
-
-		t, _ := template.ParseFiles(tmplDir + "upload.html")
-		t.Execute(w, &MosaicData{Error: err})
+		processError(w, err, "Cannot show the mosaic page:", "upload.html")
 		return
 	}
 
 	err = t.Execute(w, &MosaicData{ImageEnc: origImageEnc, MosaicEnc: mosaicEnc})
 	if err != nil {
-		fmt.Printf("Cannot show the mosaic page: %v", err)
-
-		t, _ := template.ParseFiles(tmplDir + "upload.html")
-		t.Execute(w, &MosaicData{Error: err})
+		processError(w, err, "Cannot show the mosaic page:", "upload.html")
 		return
 	}
-}
-
-func encodeOrigImage(r *http.Request) (image.Image, string, error) {
-
-	// original image
-	uploaded, _, err := r.FormFile("file")
-	if err != nil {
-		fmt.Printf("Cannot show the mosaic page: %v", err)
-
-		return nil, "", err
-	}
-	defer uploaded.Close()
-
-	origImage, err := jpeg.Decode(uploaded)
-	if err != nil {
-		fmt.Printf("Cannot show the mosaic page: %v", err)
-
-		return nil, "", err
-	}
-
-	origImageContent := new(bytes.Buffer)
-	jpeg.Encode(origImageContent, origImage, nil)
-
-	origImageEnc := base64.StdEncoding.EncodeToString(origImageContent.Bytes())
-
-	return origImage, origImageEnc, nil
 }
 
 func main() {

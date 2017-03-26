@@ -12,6 +12,7 @@ import (
 	"image/jpeg"
 	"io/ioutil"
 	"math"
+	"net/http"
 	"os"
 	"regexp"
 	"sync"
@@ -99,8 +100,8 @@ func (tile TileGeometry) drawMosaicTile(tiles map[string]*TileImage, origImage i
 	xDelta, yDelta int, newImage draw.Image) {
 
 	x, y, xMin, yMin := tile.x, tile.y, tile.xMin, tile.yMin
-	wg := tile.wg
-	mutex := tile.mutex
+	//wg := tile.wg
+	//mutex := tile.mutex
 
 	origRGB := getImageColour(origImage, x, y, x+xDelta, y+yDelta)
 
@@ -122,12 +123,38 @@ func (tile TileGeometry) drawMosaicTile(tiles map[string]*TileImage, origImage i
 	}
 
 	// draw the tile into the new image
-	mutex.Lock()
+	tile.mutex.Lock()
 	draw.Draw(newImage, image.Rectangle{image.Point{x, y}, image.Point{x + xDelta, y + yDelta}}, tiles[nearestFilename].scaled, image.Point{xMin, yMin}, draw.Src)
-	mutex.Unlock()
+	tile.mutex.Unlock()
 
-	wg.Done()
+	tile.wg.Done()
 
+}
+
+func EncodeOrigImage(r *http.Request) (image.Image, string, error) {
+
+	// original image
+	uploaded, _, err := r.FormFile("file")
+	if err != nil {
+		fmt.Printf("Cannot show the mosaic page: %v", err)
+
+		return nil, "", err
+	}
+	defer uploaded.Close()
+
+	origImage, err := jpeg.Decode(uploaded)
+	if err != nil {
+		fmt.Printf("Cannot show the mosaic page: %v", err)
+
+		return nil, "", err
+	}
+
+	origImageContent := new(bytes.Buffer)
+	jpeg.Encode(origImageContent, origImage, nil)
+
+	origImageEnc := base64.StdEncoding.EncodeToString(origImageContent.Bytes())
+
+	return origImage, origImageEnc, nil
 }
 
 func CreateMosaic(tilesDir string, origImage image.Image, tilesCount int) (string, error) {
@@ -257,7 +284,7 @@ func CreateMosaic(tilesDir string, origImage image.Image, tilesCount int) (strin
 
 	mosaicEnc := base64.StdEncoding.EncodeToString(tileBuf.Bytes())
 
-	fmt.Println("END ...")
+	fmt.Println("THE END ...")
 
 	return mosaicEnc, nil
 }

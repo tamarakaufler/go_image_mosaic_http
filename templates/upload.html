@@ -11,6 +11,11 @@
 <form enctype="multipart/form-data" action="/mosaic" method="post">
     <div class="container">
 	    <h4>Photo to upload:</h4>
+        {{if .Error}}
+        <div class="alert alert-warning">
+            {{.Error}}
+        </div>{{end}}
+
 	    <input type="file" name="file" />
 	    <br />
 	    <span>How many tiles along the edge:</span>

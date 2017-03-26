@@ -9,6 +9,11 @@
 </head>
 <body>
     <div class="container">
+        {{if .Error}}
+        <div class="alert alert-warning">
+            {{.Error}}
+        </div>{{end}}
+
         <img src="data:image/jpeg;base64,{{.ImageEnc}}" alt="uploaded photo" width=1000 />
         <img src="data:image/jpeg;base64,{{.MosaicEnc}}" alt="mosaic" width=1000 />
         <a href="/">Upload page</a>
